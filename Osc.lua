@@ -1,5 +1,11 @@
-local oscType = {}
+oscType = {
+    sq = 1,
+    sin = 2,
+    tri = 3,
+    saw = 4,
+    noise = 5
 
+}
 Osc = {}
 Osc.__index = Osc
 
@@ -53,15 +59,4 @@ function createOsc(_oscType)
 
   return instance; 
 
-end
-
--- test code
-local osc = createOsc(oscType.sq)
-osc.sampleRate = 44100
-osc.freq = 440
-osc.update(osc)
-
-for i = 1, 100 do
-    osc.update(osc)
-    print(osc.value)
 end
