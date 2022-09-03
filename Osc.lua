@@ -1,3 +1,12 @@
+--[[
+    Osc.lua
+    
+    Class for oscillator objects.
+    oscillators are just simple classes, they have just one function: update
+        - value is last calculated, well, value. Acts as current output.
+        - update() calculates new value and returns it.
+        - all oscillators have common range: 0-1, eg. they are unipolar
+]]
 require "RingBuffer"
 local str = require "str"
 oscType = {
@@ -16,7 +25,7 @@ local function setOsc(self, _oscType)
     if _oscType == oscType.sine then
         return function(self)
             self.phase = self.phase + self.freq / self.sampleRate
-            self.value = math.sin(self.phase * math.pi * 2)
+            self.value = math.sin(self.phase * math.pi * 2) * 0.5 + 0.5
             self.buf.write(self.buf, self.value)
         end
     end
@@ -31,7 +40,7 @@ local function setOsc(self, _oscType)
             if self.phase < 0.5 then
                 self.value = 1
             else
-                self.value = -1
+                self.value = 0
             end
             self.buf.write(self.buf, self.value)
 
@@ -42,7 +51,7 @@ local function setOsc(self, _oscType)
     if _oscType == oscType.saw then
         return function(self)
             self.phase = self.phase + (self.freq / self.sampleRate)
-            self.value = 2 - (self.phase % 1) * 2 - 1
+            self.value = (self.phase % 1)
             self.buf.write(self.buf, self.value)
         end
     end
@@ -55,9 +64,9 @@ local function setOsc(self, _oscType)
             local phaseIncrement = self.phase % 1
 
             if phaseIncrement < 0.5 then
-                self.value = phaseIncrement * 4 - 1
+                self.value = phaseIncrement * 2
             else
-                self.value = 3 - phaseIncrement * 4
+                self.value = 1 - (phaseIncrement - 0.5) * 2
             end
             self.buf.write(self.buf, self.value)
 
@@ -67,7 +76,7 @@ local function setOsc(self, _oscType)
     -- noise implementation
     if _oscType == oscType.noise then
         return function(self)
-            self.value = math.random() * 2 - 1
+            self.value = math.random()
             self.buf.write(self.buf, self.value)
         end
     end
@@ -76,7 +85,7 @@ end
 function Osc.new()
     local instance = setmetatable({}, Osc)
 
-    instance.freq = 20
+    instance.freq = 2
     instance.phase = 0
     instance.value = 0
     instance.sampleRate = 60
