@@ -12,14 +12,15 @@
 Timer = {}
 Timer.__index = Timer
 
-Timer.instance = nil
 
 Timer.new = function()
-    if Timer.instance == nil then
-        Timer.instance = {}
-        setmetatable(Timer.instance, Timer)
-    end
-    return Timer.instance
+    local obj = setmetatable({}, Timer)
+    obj.startTime = 0
+    obj.stopTime = 0
+    obj.elapsedTime = 0
+    obj.isRunning = false
+    obj.functionToCall = nil
+    return obj
 end
 
 Timer.start = function(self)
@@ -45,12 +46,17 @@ Timer.getTime = function(self)
     return self.stopTime - self.startTime
 end
 
+Timer.setFunc = function(self, func)
+    self.functionToCall = func
+end
 Timer.update = function(self)
-    if self.startTime == nil then
-        return
+    if self.isRunning then
+        self.elapsedTime = self.getTime()
+        if self.elapsedTime >= self.functionToCall then
+            self.functionToCall()
+            self.reset()
+        end
     end
-    if self.stopTime == nil then
-        return os.clock() - self.startTime
-    end
-    return self.stopTime - self.startTime
+
+   
 end

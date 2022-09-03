@@ -1,5 +1,6 @@
-
- oscType = {
+require "RingBuffer"
+local str = require "str"
+oscType = {
     sq = 1,
     sine = 2,
     tri = 3,
@@ -10,71 +11,88 @@
 Osc = {}
 Osc.__index = Osc
 
-
-function createOsc(_oscType)
-   local instance = setmetatable({}, Osc)
-   
-   instance.freq = 20
-   instance.phase = 0
-   instance.value = 0
-    instance.sampleRate = 60
-   instance.type = _oscType
-
+local function setOsc(self, _oscType)
 
     if _oscType == oscType.sine then
-        instance.update = function(self)
+        return function(self)
             self.phase = self.phase + self.freq / self.sampleRate
-            self.value = math.sin(self.phase*math.pi*2)
+            self.value = math.sin(self.phase * math.pi * 2)
+            self.buf.write(self.buf, self.value)
         end
+    end
+
+    if _oscType == oscType.sq then
+        return function(self)
+            -- square wave oscillator
+            self.phase = self.phase + self.freq / self.sampleRate
+            if self.phase > 1 then
+                self.phase = self.phase - 1
+            end
+            if self.phase < 0.5 then
+                self.value = 1
+            else
+                self.value = -1
+            end
+            self.buf.write(self.buf, self.value)
+
         end
+    end
+    -- saw implementation
 
-   if _oscType == oscType.sq then
-         instance.update = function(self)
-             -- square wave oscillator 
-                self.phase = self.phase + self.freq / self.sampleRate
-                if self.phase > 1 then
-                    self.phase = self.phase - 1
-                end
-                if self.phase < 0.5 then
-                    self.value = 1
-                else
-                    self.value = -1
-                end
+    if _oscType == oscType.saw then
+        return function(self)
+            self.phase = self.phase + (self.freq / self.sampleRate)
+            self.value = 2 - (self.phase % 1) * 2 - 1
+            self.buf.write(self.buf, self.value)
+        end
+    end
 
-         end
-  end
-  -- saw implementation
 
-  if _oscType == oscType.saw then
-    instance.update = function(self)
-          self.phase = self.phase + (self.freq / self.sampleRate)
-          self.value = 2 - (self.phase % 1) * 2 - 1
-      end
-  end
-      
-
-  -- tri implementation, signal is going up and down, phase is the position in the cycle
-  if _oscType == oscType.tri then
-      instance.update = function(instance)
-            instance.phase = instance.phase + (instance.freq / instance.sampleRate)
-            local phaseIncrement = instance.phase % 1
+    -- tri implementation, signal is going up and down, phase is the position in the cycle
+    if _oscType == oscType.tri then
+        return function(self)
+            self.phase = self.phase + (self.freq / self.sampleRate)
+            local phaseIncrement = self.phase % 1
 
             if phaseIncrement < 0.5 then
-                instance.value = phaseIncrement * 4 - 1
+                self.value = phaseIncrement * 4 - 1
             else
-                instance.value = 3 - phaseIncrement * 4
+                self.value = 3 - phaseIncrement * 4
             end
-        
-      end
-  end
+            self.buf.write(self.buf, self.value)
 
-  -- noise implementation
-  if _oscType == oscType.noise then
-      instance.update = function(instance)
-          instance.value = math.random() * 2 - 1 
-      end
-  end
+        end
+    end
 
-  return instance; 
+    -- noise implementation
+    if _oscType == oscType.noise then
+        return function(self)
+            self.value = math.random() * 2 - 1
+            self.buf.write(self.buf, self.value)
+        end
+    end
+end
+
+function Osc.new()
+    local instance = setmetatable({}, Osc)
+
+    instance.freq = 20
+    instance.phase = 0
+    instance.value = 0
+    instance.sampleRate = 60
+    instance.id = str.genId()
+    instance.type = oscType.sine
+    instance.buf = RingBuffer.new(100)
+    instance.update = setOsc(instance, instance.type)
+    instance.setOsc = function(self, _oscType)
+        self.type = _oscType
+        self.update = setOsc(self, self.type)
+
+
+    end
+
+
+
+    return instance;
 
 end
