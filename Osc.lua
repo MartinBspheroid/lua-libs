@@ -6,6 +6,10 @@
         - value is last calculated, well, value. Acts as current output.
         - update() calculates new value and returns it.
         - all oscillators have common range: 0-1, eg. they are unipolar
+
+
+    TODO: remove RingBuffer and keep this as clean as possible, ring buffer will be part of OscOp.lua
+
 ]]
 require "RingBuffer"
 local str = require "str"
@@ -26,7 +30,7 @@ local function setOsc(self, _oscType)
         return function(self)
             self.phase = self.phase + self.freq / self.sampleRate
             self.value = math.sin(self.phase * math.pi * 2) * 0.5 + 0.5
-            self.buf.write(self.buf, self.value)
+
         end
     end
 
@@ -42,7 +46,7 @@ local function setOsc(self, _oscType)
             else
                 self.value = 0
             end
-            self.buf.write(self.buf, self.value)
+
 
         end
     end
@@ -52,7 +56,7 @@ local function setOsc(self, _oscType)
         return function(self)
             self.phase = self.phase + (self.freq / self.sampleRate)
             self.value = (self.phase % 1)
-            self.buf.write(self.buf, self.value)
+
         end
     end
 
@@ -68,7 +72,7 @@ local function setOsc(self, _oscType)
             else
                 self.value = 1 - (phaseIncrement - 0.5) * 2
             end
-            self.buf.write(self.buf, self.value)
+
 
         end
     end
@@ -77,7 +81,7 @@ local function setOsc(self, _oscType)
     if _oscType == oscType.noise then
         return function(self)
             self.value = math.random()
-            self.buf.write(self.buf, self.value)
+
         end
     end
 end
@@ -89,19 +93,14 @@ function Osc.new()
     instance.phase = 0
     instance.value = 0
     instance.sampleRate = 60
-    instance.id = str.genId()
+
     instance.type = oscType.sine
     instance.buf = RingBuffer.new(100)
     instance.update = setOsc(instance, instance.type)
     instance.setOsc = function(self, _oscType)
         self.type = _oscType
         self.update = setOsc(self, self.type)
-
-
     end
-
-
-
     return instance;
 
 end
